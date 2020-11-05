@@ -1,0 +1,48 @@
+version: '2'
+services:
+  mlflow:
+    build: .
+    restart: always
+    depends_on:
+      - db
+      - minio
+    environment:
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=ACCESSKEY
+      - AWS_SECRET_ACCESS_KEY=SECRETKEY
+    ports:
+      - "8000:8000"
+    networks:
+      - mlflow-net
+    command: mlflow server --default-artifact-root s3://mlflow --backend-store-uri postgresql://mlflow:mlflow@db/mlflow -h 0.0.0.0 -p 8000
+  db:
+    image: postgres:10.0
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=mlflow
+      - POSTGRES_USER=mlflow
+      - POSTGRES_PASSWORD=mlflow
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - pg-volume:/var/lib/postgresql/data/pgdata
+    networks:
+      - mlflow-net
+  minio:
+    image: 'bitnami/minio:latest'
+    restart: always
+    ports:
+      - '9000:9000'
+    environment:
+      - MINIO_ACCESS_KEY=ACCESSKEY
+      - MINIO_SECRET_KEY=SECRETKEY
+    volumes:
+      - minio-volume:/data
+    networks:
+      - mlflow-net
+volumes:
+  pg-volume:
+  minio-volume:
+networks:
+  mlflow-net:
